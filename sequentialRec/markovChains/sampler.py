@@ -6,7 +6,7 @@ Reference: https://github.com/kang205/SASRec/blob/master/sampler.py
 '''
 
 # Disclaimer:
-# Part of this file is derived from 
+# Part of this file is derived from
 # https://github.com/kang205/SASRec/
 
 import numpy as np
@@ -44,11 +44,11 @@ def sample_function(data, n_items, n_users, batch_size, max_len, neg_size, resul
         Refer to https://hips.seas.harvard.edu/blog/2013/03/03/the-alias-method-efficient-sampling-with-many-discrete-outcomes/
         for details
         '''
-        
+
         user = np.random.choice(a=range(1,1+n_users), p=prob_)
         u = str(user)
 
-        # sample a slice from user u randomly. 
+        # sample a slice from user u randomly.
         idx = np.random.randint(1, len(data[u]))
         start = 0 if idx >= max_len else max_len - idx
         len_of_item = max_len - start
@@ -82,22 +82,25 @@ def sample_function(data, n_items, n_users, batch_size, max_len, neg_size, resul
 
 class Sampler(object):
     def __init__(self, data, n_items, n_users, batch_size=128, max_len=20, neg_size=10, n_workers=10, neg_method='rand'):
-        self.result_queue = Queue(maxsize=int(2e5))
+        try:
+            self.result_queue = Queue(maxsize=int(2e5)) # doesn't work on Mac
+        except:
+            self.result_queue = Queue(maxsize=32767) # but this does
         self.processors = []
         for i in range(n_workers):
             self.processors.append(
                 Process(target=sample_function, args=(data,
-                                                    n_items, 
+                                                    n_items,
                                                     n_users,
-                                                    batch_size, 
-                                                    max_len, 
-                                                    neg_size, 
-                                                    self.result_queue, 
+                                                    batch_size,
+                                                    max_len,
+                                                    neg_size,
+                                                    self.result_queue,
                                                     np.random.randint(2e9),
                                                     neg_method)))
             self.processors[-1].daemon = True
             self.processors[-1].start()
-    
+
     def next_batch(self):
         return self.result_queue.get()
 

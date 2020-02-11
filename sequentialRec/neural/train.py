@@ -34,6 +34,7 @@ parser.add_argument('--loss', type=str, default='ns', help='type of loss: ns/sam
 parser.add_argument('--data', type=str, default='gowalla', help='data set name (default: gowalla)')
 parser.add_argument('--log_interval', type=int, default=1e2, help='log interval (default: 1e2)')
 parser.add_argument('--eval_interval', type=int, default=1e3, help='eval/test interval (default: 1e3)')
+parser.add_argument('--top_k', type=int, default=20, help='eval/test accuracy top values')
 
 # ****************************** unique arguments for rnn model. *******************************************************
 # None
@@ -53,10 +54,10 @@ tf.set_random_seed(args.seed)
 train_data, val_data, test_data, n_items, n_users = data_generator(args)
 
 train_sampler = Sampler(
-                    data=train_data, 
-                    n_items=n_items, 
+                    data=train_data,
+                    n_items=n_items,
                     n_users=n_users,
-                    batch_size=args.batch_size, 
+                    batch_size=args.batch_size,
                     max_len=args.seq_len,
                     neg_size=args.neg_size,
                     n_workers=args.worker,
@@ -86,7 +87,7 @@ def evaluate(source, sess):
         total_hit_k += hit
         total_ndcg_k += ndcg
 
-    val_hit = total_hit_k / count 
+    val_hit = total_hit_k / count
     val_ndcg = total_ndcg_k / count
 
     return [val_hit, val_ndcg]
@@ -127,8 +128,8 @@ def main():
                 val_hit, val_ndcg = evaluate(val_data, sess)
                 all_val_hit.append(val_hit)
                 print('-' * 90)
-                print('| End of step {:10d} | valid hit@20 {:8.5f} | valid ndcg@20 {:8.5f}'.format(
-                        step_count, val_hit, val_ndcg))
+                print('| End of step {:10d} | valid hit@{:10d} {:8.5f} | valid ndcg@20 {:8.5f}'.format(
+                        step_count, args.top_k, val_hit, val_ndcg))
                 print('=' * 90)
                 sys.stdout.flush()
 

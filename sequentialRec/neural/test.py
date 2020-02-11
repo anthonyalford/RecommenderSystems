@@ -34,6 +34,7 @@ parser.add_argument('--loss', type=str, default='ns', help='type of loss: ns/sam
 parser.add_argument('--data', type=str, default='gowalla', help='data set name (default: gowalla)')
 parser.add_argument('--log_interval', type=int, default=1e2, help='log interval (default: 1e2)')
 parser.add_argument('--eval_interval', type=int, default=1e3, help='eval/test interval (default: 1e3)')
+parser.add_argument('--top_k', type=int, default=20, help='eval/test accuracy top values')
 
 # ****************************** unique arguments for rnn model. *******************************************************
 # None
@@ -93,7 +94,7 @@ def evaluate(source, sess):
         total_hit_k += hit
         total_ndcg_k += ndcg
 
-    val_hit = total_hit_k / count 
+    val_hit = total_hit_k / count
     val_ndcg = total_ndcg_k / count
 
     return [val_hit, val_ndcg]

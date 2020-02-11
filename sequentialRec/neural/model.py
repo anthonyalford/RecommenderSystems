@@ -63,9 +63,9 @@ class NeuralSeqRecommender(object):
         pos_emb = tf.reshape(_pos_emb, (-1, self.args.emsize))
         _neg_emb = tf.nn.embedding_lookup(self.item_embedding, self.neg)
         neg_emb = tf.reshape(_neg_emb, (-1, self.args.neg_size, self.args.emsize))
-        
-        temp_vec_neg = tf.tile(tf.expand_dims(ct_vec, [1]), [1, self.args.neg_size, 1]) 
-            
+
+        temp_vec_neg = tf.tile(tf.expand_dims(ct_vec, [1]), [1, self.args.neg_size, 1])
+
         if self.args.loss == 'ns':
             assert self.args.neg_size == 1
             pos_logit = tf.reduce_sum(ct_vec * pos_emb, -1)
@@ -93,10 +93,10 @@ class NeuralSeqRecommender(object):
                     tf.nn.sparse_softmax_cross_entropy_with_logits(labels=tf.reshape(self.pos, [-1]), \
                                                                 logits=full_logits) * istarget \
                     ) / tf.reduce_sum(istarget)
-         
+
         full_logits = tf.matmul(ct_vec, self.item_embedding, transpose_b=True)
         self.prediction = full_logits
-        
+
         self.loss = loss
         self.total_loss += loss
         reg_losses = tf.get_collection(tf.GraphKeys.REGULARIZATION_LOSSES)
@@ -106,7 +106,7 @@ class NeuralSeqRecommender(object):
         gvs = optimizer.compute_gradients(self.total_loss)
         capped_gvs = [(tf.clip_by_value(grad, -self.args.clip, self.args.clip), var) for grad, var in gvs]
         self.train_op = optimizer.apply_gradients(capped_gvs)
-        self.hit_at_k, self.ndcg_at_k, self.num_target = self._metric_at_k()
+        self.hit_at_k, self.ndcg_at_k, self.num_target = self._metric_at_k(self.args.top_k)
 
 
     def _metric_at_k(self, k=20):
@@ -126,4 +126,3 @@ class NeuralSeqRecommender(object):
         ndcg_at_k = ndcg * istarget * hit_at_k
 
         return (tf.reduce_sum(hit_at_k), tf.reduce_sum(ndcg_at_k), tf.reduce_sum(istarget))
-
