@@ -54,8 +54,8 @@ def data_generator(args):
         tr = tr_df.sort_values(['UserId', 'Time']).groupby('UserId')['ItemId'].apply(list).to_dict()
         val = val_df.sort_values(['UserId', 'Time']).groupby('UserId')['ItemId'].apply(list).to_dict()
         test = test_df.sort_values(['UserId', 'Time']).groupby('UserId')['ItemId'].apply(list).to_dict()
-            
-        _ = prepare_data(corpus_item, corpus_user, tr, args.data + '_train_tr', path_to_data)
+
+        _ = prepare_data(corpus_item, corpus_user, tr, args.data + '_train_tr', path_to_data, True)
         _ = prepare_data(corpus_item, corpus_user, val, args.data + '_train_valid',path_to_data)
         _ = prepare_data(corpus_item, corpus_user, test, args.data + '_test', path_to_data)
 
@@ -70,18 +70,22 @@ def data_generator(args):
     user2idx = np.load(path_to_data + args.data + '_user_dict.npy')
     n_items = item2idx.size
     n_users = user2idx.size
-    
     return [train_data, val_data, test_data, n_items, n_users]
 
-def prepare_data(corpus_item, corpus_user, data, dname, path_to_data):
+def prepare_data(corpus_item, corpus_user, data, dname, path_to_data, index_user=False):
     ret = {}
     user_str_ids = data.keys()
     for u in user_str_ids:
-        u_int_id = corpus_user.dict.item2idx[u]
+        # don't want to require that other files have same set of user ids
+        if index_user:
+            u_int_id = corpus_user.dict.item2idx[u]
+        else:
+            u_int_id = u
         i_int_ids = []
         item_str_ids = data[u]
         for i in item_str_ids:
-            i_int_ids.append(corpus_item.dict.item2idx[i])
+            # we want to keep our own item id
+            i_int_ids.append(int(i)) #corpus_item.dict.item2idx[i])
         ret[u_int_id] = i_int_ids
     with open(path_to_data + dname + '.json', 'w') as fp:
         json.dump(ret, fp)
@@ -115,7 +119,7 @@ def prepare_eval_test(data, batch_size, max_test_len=100):
         batches.append((batch_u, batch_inp, batch_pos))
     if num_batches * batch_size < len(all_u):
         batches.append((all_u[num_batches * batch_size:], all_inp[num_batches * batch_size:], all_pos[num_batches * batch_size:]))
-        
+
     return batches
 
 def preprocess_session(dname):
@@ -127,18 +131,18 @@ def preprocess_session(dname):
     data.columns = ['SessionId', 'ItemId', 'Time']
     session_lengths = data.groupby('SessionId').size()
     data = data[np.in1d(data.SessionId, session_lengths[session_lengths>2].index)]
-    
+
     item_supports = data.groupby('ItemId').size()
     data = data[np.in1d(data.ItemId, item_supports[item_supports>=10].index)]
     print('Unique items: {}'.format(data.ItemId.nunique()))
-        
+
     session_lengths = data.groupby('SessionId').size()
     print('Average session length: {}'.format(session_lengths.mean()))
     data = data[np.in1d(data.SessionId, session_lengths[session_lengths>2].index)]
-    
+
     session_lengths = data.groupby('SessionId').size()
     print('Average session length after removing sessions with less than two event: {}'.format(session_lengths.mean()))
-    
+
     session_max_times = data.groupby('SessionId').Time.max()
     tmax = data.Time.max()
     session_train = session_max_times[session_max_times < tmax-86400*2].index # We preserve sessions of last two days as validation and test data
@@ -146,7 +150,7 @@ def preprocess_session(dname):
     train = data[np.in1d(data.SessionId, session_train)]
     test = data[np.in1d(data.SessionId, session_test)]
     test = test[np.in1d(test.ItemId, train.ItemId)]
-    
+
     tslength = test.groupby('SessionId').size()
     test = test[np.in1d(test.SessionId, tslength[tslength>2].index)]
 
@@ -172,22 +176,22 @@ def preprocess_sequence(dname):
     '''
     data = pd.read_csv(data_path + dname + '/' + dname + '.tsv', sep='\t', header=None)
     data.columns = ['user', 'item', 'Time']
-    
+
     event_lengths = data.groupby('user').size()
     print('Average check-ins per user: {}'.format(event_lengths.mean()))
     data = data[np.in1d(data.user, event_lengths[event_lengths>10].index)]
-    
+
     item_supports = data.groupby('item').size()
     # 50 for delicious, 10 for gowalla
     data = data[np.in1d(data.item, item_supports[item_supports>=10].index)]
     print('Unique items: {}'.format(data.item.nunique()))
-    
+
     event_lengths = data.groupby('user').size()
     data = data[np.in1d(data.user, event_lengths[event_lengths>=10].index)]
-    
+
     event_lengths = data.groupby('user').size()
     print('Average check-ins per user after removing sessions with one event: {}'.format(event_lengths.mean()))
-    
+
     tmin = data.Time.min()
     tmax = data.Time.max()
     pivot = (tmax-tmin) * 0.9 + tmin # Preserve last 10% as validation and test data
@@ -206,7 +210,7 @@ def preprocess_sequence(dname):
     test = test[np.in1d(test.user, test_event_lengths[test_event_lengths>3].index)]
     print('Average (test) check-ins per user: {}'.format(test_event_lengths.mean()))
 
-   
+
     test_user = test.user.unique()
     test_user_ = np.random.choice(test_user, int(len(test_user) / 2), replace=False)
     test_ = test.loc[test['user'].isin(test_user_)]
@@ -215,7 +219,7 @@ def preprocess_sequence(dname):
     print('Dev size: {}'.format(len(val_)))
     print('Test size: {}'.format(len(test_)))
 
-  
+
     columns = ['user', 'item', 'Time']
     header = ['UserId', 'ItemId', 'Time']
     train.to_csv(data_path + dname + '/' + dname + '_train_tr.txt', sep='\t', columns=columns, header=header, index=False)
@@ -224,5 +228,3 @@ def preprocess_sequence(dname):
 
 if __name__ == '__main__':
     preprocess_sequence('gowalla')
-
-

@@ -35,6 +35,7 @@ parser.add_argument('--data', type=str, default='gowalla', help='data set name (
 parser.add_argument('--log_interval', type=int, default=1e2, help='log interval (default: 1e2)')
 parser.add_argument('--eval_interval', type=int, default=1e3, help='eval/test interval (default: 1e3)')
 parser.add_argument('--top_k', type=int, default=20, help='eval/test accuracy top values')
+parser.add_argument('--num_items', type=float, default=2000, help='hardcoded number of items in corpus')
 
 # ****************************** unique arguments for rnn model. *******************************************************
 # None
@@ -52,6 +53,8 @@ args = parser.parse_args()
 tf.set_random_seed(args.seed)
 
 train_data, val_data, test_data, n_items, n_users = data_generator(args)
+# we are overriding this
+n_items = args.num_items
 
 train_sampler = Sampler(
                     data=train_data,

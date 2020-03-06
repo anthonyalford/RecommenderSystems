@@ -43,6 +43,7 @@ parser.add_argument('--log_interval', type=int, default=1e2, help='log interval 
 parser.add_argument('--eval_interval', type=int, default=1e3, help='eval/test interval (default: 1e3)')
 parser.add_argument('--top_k', type=int, default=20, help='eval/test accuracy top values')
 parser.add_argument('--log_p', type=float, default=6.0, help='negative log prob for flagging (default: 6)')
+parser.add_argument('--num_items', type=float, default=2000, help='hardcoded number of items in corpus')
 
 # ****************************** unique arguments for rnn model. *******************************************************
 # None
@@ -59,6 +60,9 @@ args = parser.parse_args()
 tf.set_random_seed(args.seed)
 
 train_data, val_data, test_data, n_items, n_users = data_generator(args)
+
+# we are overriding this
+n_items = args.num_items
 
 max_test_len = 20
 test_data_per_step = prepare_eval_test(test_data, batch_size=100, max_test_len=max_test_len)
